@@ -21,6 +21,19 @@ services:
     networks:
       - db-network
 
+# Node.js Service
+  node:
+    image: node:current
+    container_name: ${APP_NAME}-node
+    volumes:
+      - ./app:/srv/app
+      - ./storage/logs/node:/root/.npm/_logs:rw
+    working_dir: /srv/app
+    #entrypoint: ['npm']
+    networks:
+      - app-network
+    tty: true
+
 # PHP Service
   app:
     build:
