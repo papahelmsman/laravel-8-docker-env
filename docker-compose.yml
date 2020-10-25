@@ -1,11 +1,11 @@
-version: "3.7"
+version: "3.4"
 
 services:
 
   # MySQL Database Service
   db:
     image: mysql:8
-    container_name: db
+    container_name: ${APP_NAME}-db
     command: ["--default-authentication-plugin=mysql_native_password"]
     environment:
       MYSQL_DATABASE: app_db
@@ -21,12 +21,60 @@ services:
     networks:
       - db-network
 
+# PHP Service
+  app:
+    build:
+      args:
+        user: laravel
+        uid: 1000
+      context: ./docker/php
+      dockerfile: Dockerfile # no need to point this line because it contains the default value and is redundant in this case
+    container_name: ${APP_NAME}-app
+    ports:
+      - "9000:9001"
+    volumes:
+      - ./app:/srv/app:cached
+    depends_on:
+      - db
+    networks:
+      - app-network
+      - db-network
+
+# NGINX Service
+  nginx:
+    build: ./docker/nginx # dockerfile: Dockerfile - by default
+    container_name: ${APP_NAME}-nginx
+    ports:
+      - "8001:80"
+    volumes:
+      - ./app/public:/srv/app/public:cached
+    depends_on:
+      - app
+    working_dir: /srv/app/public
+    networks:
+      - app-network
+
+# HTTP/2 Proxy Service
+  h2-proxy:
+    # Don't use this proxy in prod
+    build: ./docker/h2-proxy # dockerfile: Dockerfile by default
+    container_name: h2-proxy
+    depends_on:
+      - nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - app-network
+
 # Docker Networks
 networks:
+  app-network:
+    driver: bridge # no need to point this line because it contains the default value and is redundant in this case
   db-network:
-    driver: bridge # default value
+    driver: bridge # no need to point this line because it contains the default value and is redundant in this case
 
 # Volumes
 volumes:
   mysql-data:
-    driver: local # default value
+    driver: local # no need to point this line because it contains the default value and is redundant in this case
